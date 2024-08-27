@@ -1,7 +1,11 @@
 use bevy::{
     prelude::*,
     render::{
-        extract_resource::ExtractResource, render_graph::{self, RenderLabel}, render_resource::*, renderer::*, Render, RenderSet
+        extract_resource::ExtractResource,
+        render_graph::{self, RenderLabel},
+        render_resource::*,
+        renderer::*,
+        Render, RenderSet,
     },
 };
 use std::{borrow::Cow, sync::atomic::Ordering};
@@ -135,8 +139,8 @@ pub fn prepare_automata_bind_group(
     buffers: Res<GameOfLifeBuffers>,
 ) {
     // Swap (ping pong) buffers between input and output every frame
-    let load = params.frame.load(Ordering::SeqCst);
-    let (buffer_in, buffer_out) = if load % 2 == 0 {
+    let frame = params.frame.load(Ordering::SeqCst);
+    let (buffer_in, buffer_out) = if frame % 2 == 0 {
         (&buffers.in_out[0], &buffers.in_out[1])
     } else {
         (&buffers.in_out[1], &buffers.in_out[0])
@@ -199,7 +203,8 @@ impl render_graph::Node for GameOfLifeNode {
             }
             GameOfLifeState::Update => {
                 let params = world.resource_mut::<AutomataParams>();
-                if !params.is_paused {
+
+                if !params.is_paused || (params.steps_left.load(Ordering::SeqCst) > 0) {
                     params.frame.fetch_add(1, Ordering::SeqCst);
                 }
             }
@@ -211,8 +216,17 @@ impl render_graph::Node for GameOfLifeNode {
         render_context: &mut RenderContext,
         world: &World,
     ) -> Result<(), render_graph::NodeRunError> {
-        let is_paused = &world.resource::<AutomataParams>().is_paused;
-        if *is_paused {
+        let params = &world.resource::<AutomataParams>();
+
+        eprintln!(
+            "{}, {}",
+            params.frame.load(Ordering::SeqCst),
+            params.steps_left.load(Ordering::SeqCst)
+        );
+
+        let is_paused = params.is_paused;
+
+        if is_paused && (params.steps_left.load(Ordering::SeqCst) == 0) {
             return Ok(());
         }
 
@@ -246,6 +260,9 @@ impl render_graph::Node for GameOfLifeNode {
             }
         }
 
+        if params.steps_left.load(Ordering::SeqCst) > 0 {
+            params.steps_left.fetch_sub(1, Ordering::SeqCst);
+        }
         Ok(())
     }
 }

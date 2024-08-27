@@ -1,9 +1,3 @@
-// The shader reads the previous frame's state from the `input` texture, and writes the new state of
-// each pixel to the `output` texture. The textures are flipped each step to progress the
-// simulation.
-// Two textures are needed for the game of life as each pixel of step N depends on the state of its
-// neighbors at step N-1.
-
 @group(0) @binding(0) 
 var<uniform> size : vec2<u32>; // width, height
 @group(0) @binding(1) 
@@ -86,8 +80,8 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         result = u32((num_neighbors) == (3u));
     }
     if bool(result) {
-        output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y + f32(0.01), cell.color.z + f32(0.01), cell.color.w));
+        output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y + f32(0.1), cell.color.z + f32(0.1), cell.color.w));
     } else {
-        output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y - f32(0.01), cell.color.z - f32(0.01), cell.color.w));
+        output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y - f32(0.1), cell.color.z - f32(0.1), cell.color.w));
     }
 }

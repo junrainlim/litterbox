@@ -9,10 +9,10 @@ use bevy::{
         Render, RenderSet,
     },
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::atomic::Ordering};
 
 use super::automata::{GameOfLifeBuffers, GameOfLifeImage, GameOfLifeImageBindGroup};
-use crate::{NUM_OF_CELLS, SIZE, WORKGROUP_SIZE};
+use crate::{input::AutomataParams, NUM_OF_CELLS, SIZE, WORKGROUP_SIZE};
 
 pub struct AutomataColorPipelinePlugin;
 impl Plugin for AutomataColorPipelinePlugin {
@@ -69,6 +69,21 @@ impl FromWorld for AutomataColorPipeline {
                 },
                 BindGroupLayoutEntry {
                     binding: 2,
+                    count: None,
+                    visibility: ShaderStages::COMPUTE,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: BufferSize::new(
+                            (NUM_OF_CELLS
+                                * (std::mem::size_of::<u32>()            // alive: u32
+                                    + 4 * (std::mem::size_of::<f32>()))) // color: vec4<f32>
+                                as _,
+                        ),
+                    },
+                },
+                BindGroupLayoutEntry {
+                    binding: 3,
                     visibility: ShaderStages::COMPUTE,
                     ty: BindingType::StorageTexture {
                         access: StorageTextureAccess::ReadWrite,
@@ -107,17 +122,25 @@ pub fn prepare_color_bind_group(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
     buffers: Res<GameOfLifeBuffers>,
+    params: Res<AutomataParams>,
     pipeline: Res<AutomataColorPipeline>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     game_of_life_image: Res<GameOfLifeImage>,
 ) {
+    let frame = params.frame.load(Ordering::SeqCst);
+    let (buffer_in, buffer_out) = if frame % 2 == 0 {
+        (&buffers.in_out[0], &buffers.in_out[1])
+    } else {
+        (&buffers.in_out[1], &buffers.in_out[0])
+    };
     let view = gpu_images.get(&game_of_life_image.texture).unwrap();
     let color_bind_group = render_device.create_bind_group(
         Some("Game of Life Color Bind Group"),
         &pipeline.color_bind_group_layout,
         &BindGroupEntries::sequential((
             buffers.size.as_entire_binding(),
-            buffers.in_out[1].as_entire_binding(),
+            buffer_in.as_entire_binding(),
+            buffer_out.as_entire_binding(),
             &view.texture_view,
         )),
     );
@@ -144,8 +167,8 @@ impl Default for AutomataColorNode {
 
 impl render_graph::Node for AutomataColorNode {
     fn update(&mut self, world: &mut World) {
-        let pipeline_cache = world.resource::<PipelineCache>();
         let pipeline = world.resource::<AutomataColorPipeline>();
+        let pipeline_cache = world.resource::<PipelineCache>();
 
         // if the corresponding pipeline has loaded, transition to the next stage
         match self.state {

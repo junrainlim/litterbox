@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
 
 use bevy::{
     prelude::*,
@@ -9,6 +9,7 @@ use bevy::{
 pub struct AutomataParams {
     pub is_paused: bool,
     pub frame: Arc<AtomicUsize>,
+    pub steps_left: Arc<AtomicUsize>,
 }
 
 impl Default for AutomataParams {
@@ -16,6 +17,7 @@ impl Default for AutomataParams {
         Self {
             is_paused: false,
             frame: Arc::new(AtomicUsize::new(0)),
+            steps_left: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -68,6 +70,11 @@ pub fn update_input_state(
     // Pause the simulation
     if keyboard_input.just_pressed(KeyCode::Space) {
         params.is_paused = !params.is_paused;
+    }
+
+    if keyboard_input.just_pressed(KeyCode::KeyF) {
+        params.steps_left.store(1, Ordering::SeqCst); // need to store 2* number of frames to draw (2 frames = 1 cycle)
+        params.is_paused = true;
     }
 
     // if let Some(world_position) = primary_window
