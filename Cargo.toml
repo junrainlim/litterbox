@@ -53,6 +53,7 @@ log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"
 bevy_life = "0.10.1"
 iyes_perf_ui = "0.3.0"
 bytemuck = "1.17.0"
+uuid = "1.10.0"
 
 [build-dependencies]
 embed-resource = "1"
