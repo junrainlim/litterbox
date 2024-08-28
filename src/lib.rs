@@ -22,7 +22,7 @@ use pipeline::{
 
 const WORKGROUP_SIZE: u32 = 8;
 
-const DISPLAY_FACTOR: u32 = 4;
+const DISPLAY_FACTOR: u32 = 2;
 const SIZE: (u32, u32) = (600 / DISPLAY_FACTOR, 800 / DISPLAY_FACTOR);
 const NUM_OF_CELLS: usize = (SIZE.0 * SIZE.1) as usize;
 
@@ -97,8 +97,6 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, device: Res<
     let buffer_size =
         utils::create_uniform_buffer(&device, &[SIZE.0, SIZE.1], Some("Size uniform buffer"));
 
-    commands.spawn(PerfUiBundle::default());
-
     commands.insert_resource(GameOfLifeImage { texture: image });
     commands.insert_resource(GameOfLifeBuffers {
         size: buffer_size,
@@ -116,4 +114,5 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, device: Res<
         },
         BloomSettings::default(),
     ));
+    commands.spawn(PerfUiBundle::default());
 }

@@ -11,8 +11,10 @@ use bevy::{
 };
 use std::{borrow::Cow, sync::atomic::Ordering};
 
-use super::automata::{GameOfLifeBuffers, GameOfLifeImage, GameOfLifeImageBindGroup};
-use crate::{input::AutomataParams, NUM_OF_CELLS, SIZE, WORKGROUP_SIZE};
+use super::automata::{
+    GameOfLifeBuffers, GameOfLifeImage, GameOfLifeImageBindGroup, BIND_GROUP_LAYOUT_ENTRY_CELL,
+};
+use crate::{input::AutomataParams, SIZE, WORKGROUP_SIZE};
 
 pub struct AutomataColorPipelinePlugin;
 impl Plugin for AutomataColorPipelinePlugin {
@@ -41,58 +43,35 @@ impl FromWorld for AutomataColorPipeline {
 
         let color_bind_group_layout = world.resource::<RenderDevice>().create_bind_group_layout(
             Some("Game of Life Color Bind Group Layout"),
-            &[
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    count: None,
-                    visibility: ShaderStages::COMPUTE,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: BufferSize::new((2 * std::mem::size_of::<u32>()) as _),
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::COMPUTE,
+                (
+                    BindGroupLayoutEntry {
+                        binding: u32::MAX,
+                        count: None,
+                        visibility: ShaderStages::COMPUTE,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: BufferSize::new(
+                                (2 * std::mem::size_of::<u32>()) as _,
+                            ),
+                        },
                     },
-                },
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    count: None,
-                    visibility: ShaderStages::COMPUTE,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: BufferSize::new(
-                            (NUM_OF_CELLS
-                                * (std::mem::size_of::<u32>()            // alive: u32
-                                    + 4 * (std::mem::size_of::<f32>()))) // color: vec4<f32>
-                                as _,
-                        ),
+                    BIND_GROUP_LAYOUT_ENTRY_CELL,
+                    BIND_GROUP_LAYOUT_ENTRY_CELL,
+                    BindGroupLayoutEntry {
+                        binding: u32::MAX,
+                        visibility: ShaderStages::COMPUTE,
+                        ty: BindingType::StorageTexture {
+                            access: StorageTextureAccess::ReadWrite,
+                            format: TextureFormat::Rgba8Unorm,
+                            view_dimension: TextureViewDimension::D2,
+                        },
+                        count: None,
                     },
-                },
-                BindGroupLayoutEntry {
-                    binding: 2,
-                    count: None,
-                    visibility: ShaderStages::COMPUTE,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: BufferSize::new(
-                            (NUM_OF_CELLS
-                                * (std::mem::size_of::<u32>()            // alive: u32
-                                    + 4 * (std::mem::size_of::<f32>()))) // color: vec4<f32>
-                                as _,
-                        ),
-                    },
-                },
-                BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: ShaderStages::COMPUTE,
-                    ty: BindingType::StorageTexture {
-                        access: StorageTextureAccess::ReadWrite,
-                        format: TextureFormat::Rgba8Unorm,
-                        view_dimension: TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-            ],
+                ),
+            ),
         );
 
         let color_shader = world.resource::<AssetServer>().load("shaders/color.wgsl");

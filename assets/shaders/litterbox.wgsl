@@ -43,10 +43,10 @@ fn randomFloat(value: u32) -> f32 {
 }
 
 @compute @workgroup_size(8, 8, 1)
-fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>) {
+fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>, @builtin(workgroup_id) workgroup_id: vec3<u32>) {
     let location = vec2<i32>(invocation_id.xy);
 
-    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x);
+    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x + workgroup_id.x);
     let alive = randomNumber > 0.9;
     input[idx(location)] = new_cell(alive);
 }
@@ -79,9 +79,12 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     } else {
         result = u32((num_neighbors) == (3u));
     }
-    if bool(result) {
-        output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y + f32(0.1), cell.color.z + f32(0.1), cell.color.w));
-    } else {
-        output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y - f32(0.1), cell.color.z - f32(0.1), cell.color.w));
-    }
+
+    // if bool(result) {
+    //     output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y, cell.color.z + f32(0.1), cell.color.w));
+    // } else {
+    //     output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y, cell.color.z - f32(0.1), cell.color.w));
+    // }
+
+    output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y, cell.color.z, cell.color.w));
 }

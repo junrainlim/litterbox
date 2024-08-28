@@ -14,6 +14,22 @@ use crate::{AutomataParams, NUM_OF_CELLS, SIZE, WORKGROUP_SIZE};
 
 const SHADER_ASSET_PATH: &str = "shaders/litterbox.wgsl";
 
+pub const BIND_GROUP_LAYOUT_ENTRY_CELL: BindGroupLayoutEntry = BindGroupLayoutEntry {
+    binding: u32::MAX,
+    count: None,
+    visibility: ShaderStages::COMPUTE,
+    ty: BindingType::Buffer {
+        ty: BufferBindingType::Storage { read_only: false },
+        has_dynamic_offset: false,
+        min_binding_size: BufferSize::new(
+            (NUM_OF_CELLS
+                * (std::mem::size_of::<u32>()            // alive: u32
+                    + 4 * (std::mem::size_of::<f32>()))) // color: vec4<f32>
+                as _,
+        ),
+    },
+};
+
 pub struct AutomataPipelinePlugin;
 impl Plugin for AutomataPipelinePlugin {
     fn build(&self, render_app: &mut App) {
@@ -67,36 +83,8 @@ impl FromWorld for GameOfLifePipeline {
                             ),
                         },
                     },
-                    BindGroupLayoutEntry {
-                        binding: u32::MAX,
-                        count: None,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: BufferSize::new(
-                                (NUM_OF_CELLS
-                                    * (std::mem::size_of::<u32>()            // alive: u32
-                                        + 4 * (std::mem::size_of::<f32>()))) // color: vec4<f32>
-                                    as _,
-                            ),
-                        },
-                    },
-                    BindGroupLayoutEntry {
-                        binding: u32::MAX,
-                        count: None,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: BufferSize::new(
-                                (NUM_OF_CELLS
-                                    * (std::mem::size_of::<u32>()            // alive: u32
-                                        + 4 * (std::mem::size_of::<f32>()))) // color: vec4<f32>
-                                    as _,
-                            ),
-                        },
-                    },
+                    BIND_GROUP_LAYOUT_ENTRY_CELL,
+                    BIND_GROUP_LAYOUT_ENTRY_CELL,
                 ),
             ),
         );
@@ -218,11 +206,11 @@ impl render_graph::Node for GameOfLifeNode {
     ) -> Result<(), render_graph::NodeRunError> {
         let params = &world.resource::<AutomataParams>();
 
-        eprintln!(
-            "{}, {}",
-            params.frame.load(Ordering::SeqCst),
-            params.steps_left.load(Ordering::SeqCst)
-        );
+        // eprintln!(
+        //     "{}, {}",
+        //     params.frame.load(Ordering::SeqCst),
+        //     params.steps_left.load(Ordering::SeqCst)
+        // );
 
         let is_paused = params.is_paused;
 
