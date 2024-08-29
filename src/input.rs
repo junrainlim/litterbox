@@ -1,15 +1,17 @@
-use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
-
-use bevy::{
-    prelude::*,
-    render::extract_resource::ExtractResource,
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
 };
 
+use bevy::{prelude::*, render::extract_resource::ExtractResource};
+use std::time::Duration;
+
+const FRAMES_PER_SECOND: u64 = 1;
 #[derive(Debug, Resource, Clone, ExtractResource)]
 pub struct AutomataParams {
     pub is_paused: bool,
     pub frame: Arc<AtomicUsize>,
-    pub steps_left: Arc<AtomicUsize>,
+    pub frame_queue_count: Arc<AtomicUsize>,
 }
 
 impl Default for AutomataParams {
@@ -17,7 +19,7 @@ impl Default for AutomataParams {
         Self {
             is_paused: false,
             frame: Arc::new(AtomicUsize::new(0)),
-            steps_left: Arc::new(AtomicUsize::new(0)),
+            frame_queue_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -26,7 +28,9 @@ pub struct InputPlugin;
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AutomataParams>()
-            .add_systems(Update, update_input_state);
+            .add_systems(Startup, setup_draw_timer)
+            .add_systems(Update, update_input_state)
+            .add_systems(FixedUpdate, update_ready);
     }
 }
 
@@ -73,8 +77,7 @@ pub fn update_input_state(
     }
 
     if keyboard_input.just_pressed(KeyCode::KeyF) {
-        params.steps_left.store(1, Ordering::SeqCst); // need to store 2* number of frames to draw (2 frames = 1 cycle)
-        params.is_paused = true;
+        params.frame_queue_count.store(1, Ordering::SeqCst); // need to store 2* number of frames to draw (2 frames = 1 cycle)
     }
 
     // if let Some(world_position) = primary_window
@@ -86,4 +89,29 @@ pub fn update_input_state(
     //     params.mouse_pos =
     //         crate::utils::world_pos_to_canvas_pos(world_position * Vec2::new(1.0, -1.0));
     // }
+}
+
+#[derive(Resource)]
+pub struct DrawTimer {
+    timer: Timer,
+}
+
+pub fn update_ready(mut timer: ResMut<DrawTimer>, params: ResMut<AutomataParams>, time: Res<Time>) {
+    if params.is_paused {
+        return;
+    }
+    timer.timer.tick(time.delta());
+    if timer.timer.just_finished() {
+        eprintln!("Frame {}", params.frame.load(Ordering::SeqCst));
+        params.frame_queue_count.store(1, Ordering::SeqCst);
+    }
+}
+
+fn setup_draw_timer(mut commands: Commands) {
+    commands.insert_resource(DrawTimer {
+        timer: Timer::new(
+            Duration::from_secs(1 / FRAMES_PER_SECOND),
+            TimerMode::Repeating,
+        ),
+    })
 }

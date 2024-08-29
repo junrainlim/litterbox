@@ -14,10 +14,6 @@ fn idx(location: vec2<i32>) -> i32 {
     return location.y * i32(size.x) + location.x;
 }
 
-fn new_cell(alive: bool) -> Cell {
-    return Cell(u32(alive), vec4(f32(alive), 0., 0., 1.));
-}
-
 fn get_cell(location: vec2<i32>) -> Cell {
     return input[idx(location)];
 }
@@ -42,13 +38,15 @@ fn randomFloat(value: u32) -> f32 {
     return f32(hash(value)) / 4294967295.0;
 }
 
+
 @compute @workgroup_size(8, 8, 1)
 fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>, @builtin(workgroup_id) workgroup_id: vec3<u32>) {
     let location = vec2<i32>(invocation_id.xy);
 
-    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x + workgroup_id.x);
+    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x + workgroup_id.x + workgroup_id.y + workgroup_id.z);
     let alive = randomNumber > 0.9;
-    input[idx(location)] = new_cell(alive);
+
+    input[idx(location)] = Cell(u32(alive), vec4(0., 0., 1., f32(alive)));
 }
 
 fn count_neighbors_simple(location: vec2<i32>) -> u32 {
@@ -80,11 +78,5 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         result = u32((num_neighbors) == (3u));
     }
 
-    // if bool(result) {
-    //     output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y, cell.color.z + f32(0.1), cell.color.w));
-    // } else {
-    //     output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y, cell.color.z - f32(0.1), cell.color.w));
-    // }
-
-    output[idx(location)] = Cell(result, vec4<f32>(f32(result), cell.color.y, cell.color.z, cell.color.w));
+    output[idx(location)] = Cell(result, cell.color);
 }
