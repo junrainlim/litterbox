@@ -22,7 +22,7 @@ use pipeline::{
 
 const WORKGROUP_SIZE: u32 = 8;
 
-const DISPLAY_FACTOR: u32 = 2;
+const DISPLAY_FACTOR: u32 = 4;
 const SIZE: (u32, u32) = (600 / DISPLAY_FACTOR, 800 / DISPLAY_FACTOR);
 const NUM_OF_CELLS: usize = (SIZE.0 * SIZE.1) as usize;
 

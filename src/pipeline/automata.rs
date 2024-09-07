@@ -191,8 +191,10 @@ impl render_graph::Node for GameOfLifeNode {
             }
             GameOfLifeState::Update => {
                 let params = world.resource_mut::<AutomataParams>();
-
-                if !params.is_paused && (params.frame_queue_count.load(Ordering::SeqCst) > 0) {
+                // if !params.is_paused {
+                //     params.steps_left.fetch_add(1, Ordering::SeqCst);
+                // }
+                if params.steps_left.load(Ordering::SeqCst) > 0 {
                     params.frame.fetch_add(1, Ordering::SeqCst);
                 }
             }
@@ -214,7 +216,7 @@ impl render_graph::Node for GameOfLifeNode {
 
         let is_paused = params.is_paused;
 
-        if is_paused && (params.frame_queue_count.load(Ordering::SeqCst) == 0) {
+        if is_paused && (params.steps_left.load(Ordering::SeqCst) == 0) {
             return Ok(());
         }
 
@@ -248,8 +250,8 @@ impl render_graph::Node for GameOfLifeNode {
             }
         }
 
-        if params.frame_queue_count.load(Ordering::SeqCst) > 0 {
-            params.frame_queue_count.fetch_sub(1, Ordering::SeqCst);
+        if params.steps_left.load(Ordering::SeqCst) > 0 {
+            params.steps_left.fetch_sub(1, Ordering::SeqCst);
         }
         Ok(())
     }

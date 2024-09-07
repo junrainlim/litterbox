@@ -6,12 +6,12 @@ use std::sync::{
 use bevy::{prelude::*, render::extract_resource::ExtractResource};
 use std::time::Duration;
 
-const FRAMES_PER_SECOND: u64 = 1;
+const FRAMES_PER_SECOND: u64 = 60;
 #[derive(Debug, Resource, Clone, ExtractResource)]
 pub struct AutomataParams {
     pub is_paused: bool,
     pub frame: Arc<AtomicUsize>,
-    pub frame_queue_count: Arc<AtomicUsize>,
+    pub steps_left: Arc<AtomicUsize>,
 }
 
 impl Default for AutomataParams {
@@ -19,7 +19,7 @@ impl Default for AutomataParams {
         Self {
             is_paused: false,
             frame: Arc::new(AtomicUsize::new(0)),
-            frame_queue_count: Arc::new(AtomicUsize::new(0)),
+            steps_left: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -77,7 +77,7 @@ pub fn update_input_state(
     }
 
     if keyboard_input.just_pressed(KeyCode::KeyF) {
-        params.frame_queue_count.store(1, Ordering::SeqCst); // need to store 2* number of frames to draw (2 frames = 1 cycle)
+        params.steps_left.store(1, Ordering::SeqCst);
     }
 
     // if let Some(world_position) = primary_window
@@ -102,8 +102,8 @@ pub fn update_ready(mut timer: ResMut<DrawTimer>, params: ResMut<AutomataParams>
     }
     timer.timer.tick(time.delta());
     if timer.timer.just_finished() {
-        eprintln!("Frame {}", params.frame.load(Ordering::SeqCst));
-        params.frame_queue_count.store(1, Ordering::SeqCst);
+        // eprintln!("Frame {}", params.frame.load(Ordering::SeqCst));
+        params.steps_left.store(1, Ordering::SeqCst);
     }
 }
 

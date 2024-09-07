@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-use litterbox::GamePlugin; // ToDo: Replace bevy_game with your new crate name.
+// use litterbox::GamePlugin; // ToDo: Replace bevy_game with your new crate name.
 
 #[bevy_main]
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
                 }),
                 ..default()
             }),
-            GamePlugin,
+            // GamePlugin,
         ))
         .run();
 }
