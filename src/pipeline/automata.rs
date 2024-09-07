@@ -191,9 +191,7 @@ impl render_graph::Node for GameOfLifeNode {
             }
             GameOfLifeState::Update => {
                 let params = world.resource_mut::<AutomataParams>();
-                // if !params.is_paused {
-                //     params.steps_left.fetch_add(1, Ordering::SeqCst);
-                // }
+
                 if params.steps_left.load(Ordering::SeqCst) > 0 {
                     params.frame.fetch_add(1, Ordering::SeqCst);
                 }
@@ -207,12 +205,6 @@ impl render_graph::Node for GameOfLifeNode {
         world: &World,
     ) -> Result<(), render_graph::NodeRunError> {
         let params = &world.resource::<AutomataParams>();
-
-        // eprintln!(
-        //     "{}, {}",
-        //     params.frame.load(Ordering::SeqCst),
-        //     params.steps_left.load(Ordering::SeqCst)
-        // );
 
         let is_paused = params.is_paused;
 
