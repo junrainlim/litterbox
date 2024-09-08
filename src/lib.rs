@@ -22,8 +22,9 @@ use pipeline::{
 
 const WORKGROUP_SIZE: u32 = 8;
 
-const DISPLAY_FACTOR: u32 = 4;
-const SIZE: (u32, u32) = (600 / DISPLAY_FACTOR, 800 / DISPLAY_FACTOR);
+pub const DISPLAY_FACTOR: u32 = 4;
+// Should be a multiple of WORKGROUP_SIZE
+pub const SIZE: (u32, u32) = (64 * 8 / DISPLAY_FACTOR, 64 * 8 / DISPLAY_FACTOR);
 const NUM_OF_CELLS: usize = (SIZE.0 * SIZE.1) as usize;
 
 pub struct GameOfLifeComputePlugin;
@@ -95,7 +96,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, device: Res<
         .collect::<Vec<_>>();
 
     let buffer_size =
-        utils::create_uniform_buffer(&device, &[SIZE.0, SIZE.1], Some("Size uniform buffer"));
+        utils::create_uniform_buffer(&device, &[SIZE.0, SIZE.1], Some("Size Uniform Buffer"));
 
     commands.insert_resource(GameOfLifeImage { texture: image });
     commands.insert_resource(GameOfLifeBuffers {

@@ -19,10 +19,11 @@ fn get_cell(location: vec2<i32>) -> Cell {
 }
 
 @compute @workgroup_size(8, 8, 1)
-fn color_cells(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
-    let location = vec2<i32>(invocation_id.xy);
+fn color_cells(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
+    var location = vec2<i32>(global_invocation_id.xy);
     let cell = get_cell(location);
-    var color: vec4<f32> = cell.color;
+    var color = cell.color;
+    color.y = f32(global_invocation_id.y / size.y / 4);
 
-    textureStore(texture, location, vec4<f32>(color.xyz, f32(cell.alive)));
+    textureStore(texture, location, color);
 }

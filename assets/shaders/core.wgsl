@@ -1,5 +1,11 @@
 struct Cell {
-    alive: u32,
+    type_id: i32,
+    /*
+    ID  Type
+    0   Air
+    1   Wall
+    2   Sand
+    */
     color: vec4<f32>,
 }
 

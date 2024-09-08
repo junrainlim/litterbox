@@ -11,53 +11,79 @@ fn idx(location: vec2<i32>) -> i32 {
     return location.y * i32(size.x) + location.x;
 }
 
-fn get_cell(location: vec2<i32>) -> Cell {
-    return input[idx(location)];
-}
-
-fn is_alive(location: vec2<i32>, offset_x: i32, offset_y: i32) -> u32 {
-    var loc = ((location + vec2<i32>(offset_x, offset_y)) + vec2<i32>(size)) % vec2<i32>(size);
-    return input[idx(loc)].alive;
+fn get_cell(location: vec2<i32>, offset_x: i32, offset_y: i32) -> Cell {
+    let loc = ((location + vec2<i32>(offset_x, offset_y)) + vec2<i32>(size)) % vec2<i32>(size);
+    return input[idx(location + vec2<i32>(offset_x, offset_y))];
 }
 
 @compute @workgroup_size(8, 8, 1)
-fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>, @builtin(workgroup_id) workgroup_id: vec3<u32>) {
-    let location = vec2<i32>(invocation_id.xy);
+fn init(@builtin(global_invocation_id) global_invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>, @builtin(workgroup_id) workgroup_id: vec3<u32>) {
+    let location = vec2<i32>(global_invocation_id.xy);
 
-    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x + workgroup_id.x + workgroup_id.y + workgroup_id.z);
-    let alive = randomNumber > 0.9;
+    let randomNumber = randomFloat(global_invocation_id.y * num_workgroups.x + global_invocation_id.x + workgroup_id.x + workgroup_id.y + workgroup_id.z);
+    var type_id = 0;
+    var color = vec4(0., 0., 0., 1.);
 
-    input[idx(location)] = Cell(u32(alive), vec4(0., 0., 1., f32(alive)));
+    // Not sure where this number comes from (divide by 1.2?) comes from but it works
+    if (global_invocation_id.y == (size.y / 2) - 1) || (global_invocation_id.x == 0 || global_invocation_id.x == size.x - 1) {
+        type_id = 1;
+        color.x = 1.;
+    }
+    else if randomNumber > 0.9 {
+        type_id = 2;
+        color.z = 1.;
+    }
+
+    input[idx(location)] = Cell(i32(type_id), color);
 }
 
-fn count_neighbors_simple(location: vec2<i32>) -> u32 {
-    var result: u32 = 0u;
-    for (var x: i32 = -1; x < 2; x++) {
-        for (var y: i32 = -1; y < 2; y++) {
-            if x == 0 && y == 0 {
-                continue;
-            }
+@compute @workgroup_size(8, 8, 1)
+fn update(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
+    let location = vec2<i32>(global_invocation_id.xy);
+    // let num_neighbors = count_neighbors_simple(location);
+    let cell = get_cell(location, 0, 0);
 
-            result += is_alive(location, x, y);
+    var result: Cell = cell;
+    switch cell.type_id {
+        // Treat default as id=0 (Air)
+        case 0, default {
+            let above = get_cell(location, 0, -1);
+            if above.type_id == 2 {
+                result = Cell(2, above.color);
+            } else if above.type_id == 0 {
+                let above_right = get_cell(location, 1, -1);
+                if above_right.type_id == 2 {
+                    result = Cell(2, above_right.color);
+                } else {
+                    let above_left = get_cell(location, -1, -1);
+                    if above_left.type_id == 2 {
+                        result = Cell(2, above_left.color);
+                    }
+                }
+            }
+        }
+        // Wall
+        case 1 {
+            result = cell;
+        }
+        // Sand
+        case 2 {
+            let below = get_cell(location, 0, 1);
+            if below.type_id == 0 {
+                result = Cell(0, vec4(0.,0.,0.,1.));
+            } else {
+                let below_left = get_cell(location, -1, 1);
+                if below_left.type_id == 0 {
+                    result = Cell(0, vec4(0.,0.,0.,1.));
+                } else {
+                    let below_right = get_cell(location, 1, 1);
+                    if below_right.type_id == 0 {
+                        result = Cell(0, vec4(0,0.,0.,1.));
+                    }
+                }
+            }
         }
     }
-    return result;
-}
 
-@compute @workgroup_size(8, 8, 1)
-fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
-    let location = vec2<i32>(invocation_id.xy);
-    let num_neighbors = count_neighbors_simple(location);
-    var cell = get_cell(location);
-    let is_alive = bool(cell.alive);
-
-    var result: u32 = 0u;
-
-    if is_alive {
-        result = ((u32((num_neighbors) == (2u))) | (u32((num_neighbors) == (3u))));
-    } else {
-        result = u32((num_neighbors) == (3u));
-    }
-
-    output[idx(location)] = Cell(result, cell.color);
+    output[idx(location)] = result;
 }

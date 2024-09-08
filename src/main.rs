@@ -5,7 +5,7 @@
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use iyes_perf_ui::prelude::*;
-use litterbox::GameOfLifeComputePlugin;
+use litterbox::{GameOfLifeComputePlugin, DISPLAY_FACTOR, SIZE};
 
 fn main() {
     App::new()
@@ -14,7 +14,11 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: ((600) as f32, (800) as f32).into(),
+                        resolution: (
+                            (SIZE.0 * DISPLAY_FACTOR) as f32,
+                            (SIZE.1 * DISPLAY_FACTOR) as f32,
+                        )
+                            .into(),
                         // uncomment for unthrottled FPS
                         // present_mode: bevy::window::PresentMode::AutoNoVsync,
                         ..default()

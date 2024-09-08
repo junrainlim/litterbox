@@ -6,7 +6,8 @@ use std::sync::{
 use bevy::{prelude::*, render::extract_resource::ExtractResource};
 use std::time::Duration;
 
-const FRAMES_PER_SECOND: u64 = 60;
+const FRAMES_PER_SECOND: i32 = 2;
+
 #[derive(Debug, Resource, Clone, ExtractResource)]
 pub struct AutomataParams {
     pub is_paused: bool,
@@ -102,16 +103,19 @@ pub fn update_ready(mut timer: ResMut<DrawTimer>, params: ResMut<AutomataParams>
     }
     timer.timer.tick(time.delta());
     if timer.timer.just_finished() {
-        // eprintln!("Frame {}", params.frame.load(Ordering::SeqCst));
+        // eprintln!(
+        //     "Frame {} Steps left {}",
+        //     params.frame.load(Ordering::SeqCst),
+        //     params.steps_left.load(Ordering::SeqCst)
+        // );
         params.steps_left.store(1, Ordering::SeqCst);
     }
 }
 
 fn setup_draw_timer(mut commands: Commands) {
+    let x = 1.0 / (FRAMES_PER_SECOND) as f32;
+    eprintln!("{}", x);
     commands.insert_resource(DrawTimer {
-        timer: Timer::new(
-            Duration::from_secs(1 / FRAMES_PER_SECOND),
-            TimerMode::Repeating,
-        ),
+        timer: Timer::new(Duration::from_secs_f32(x), TimerMode::Repeating),
     })
 }
